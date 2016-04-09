@@ -2,10 +2,10 @@
 An XML comment extension for visual studio 2015. Inspired by [CppTripleSlash](https://cpptripleslash.codeplex.com/documentation).
 
 # Installation
-[TBD]
+Downloads [CppXmlComments](https://visualstudiogallery.msdn.microsoft.com/80544e5f-e49a-4413-89e1-fd857534f3de) or installs from visual studio extensions.
 
 # Usage
-[TBD]
+Similar to add comment for C# in visual studio 2015.
 
 # Contribute
-[TBD]
+File an issue for any new feature request. Pulls request to add new features or bug fixes are welcomed.
