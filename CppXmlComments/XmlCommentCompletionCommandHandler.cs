@@ -198,7 +198,7 @@ namespace CppXmlComments
                 {
                     CodeParameter parameter = child as CodeParameter;
                     if (parameter != null)
-                        sb.AppendFormat("{0}/// <param name=\"{1}\"></param>", lineBreak, parameter.Name);
+                        sb.AppendFormat("{0}{1}/// <param name=\"{2}\"></param>", lineBreak, indent, parameter.Name);
                 }
 
                 // If there is the return type is not void, generate a returns element
