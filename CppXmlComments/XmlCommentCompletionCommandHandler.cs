@@ -367,21 +367,54 @@ namespace CppXmlComments
                         // If the selection is fully selected, commit the current session
                         if (this.session.SelectedCompletionSet.SelectionStatus.IsSelected)
                         {
+                            // Get the tag name
+                            var tagName = this.session.SelectedCompletionSet.SelectionStatus.Completion.DisplayText;
+
                             // Commit the session
                             this.session.Commit();
 
                             // Move the caret
                             var textSelection = this.dte.ActiveDocument.Selection as TextSelection;
-                            var currentLine = this.textView.TextSnapshot.GetLineFromPosition(this.textView.Caret.Position.BufferPosition.Position).GetText();
-                            if (!String.IsNullOrEmpty(currentLine) && textSelection != null)
+                            switch (tagName)
                             {
-                                int index = currentLine.IndexOf('\'');
-                                index = index < 0 ? currentLine.IndexOf("[]") : index;
-                                index = index < 0 ? currentLine.IndexOf("--->") : index;
-                                index = index < 0 ? currentLine.IndexOf('"') : index;
-                                index = index < 0 ? currentLine.IndexOf('>') : index;
-                                int offset = textSelection.CurrentColumn - 2 - index;
-                                textSelection.CharLeft(false, offset);
+                                case "<!-->":
+                                case "<![CDATA[>":
+                                case "<see>":
+                                case "<seealso>":
+                                    textSelection.CharLeft(false, 3);
+                                    break;
+                                case "<c>":
+                                    textSelection.CharLeft(false, 4);
+                                    break;
+                                case "<param>":
+                                case "<code>":
+                                case "<list>":
+                                case "<para>":
+                                    textSelection.CharLeft(false, 7);
+                                    break;
+                                case "<returns>":
+                                case "<remarks>":
+                                case "<example>":
+                                    textSelection.CharLeft(false, 10);
+                                    break;
+                                case "<exception>":
+                                case "<typeparam>":
+                                    textSelection.CharLeft(false, 14);
+                                    break;
+                                case "<include>":
+                                    textSelection.CharLeft(false, 21);
+                                    break;
+                                case "<paramref>":
+                                    textSelection.CharLeft(false, 13);
+                                    break;
+                                case "<permission>":
+                                    textSelection.CharLeft(false, 15);
+                                    break;
+                                case "<value>":
+                                    textSelection.CharLeft(false, 8);
+                                    break;
+                                default:
+                                    break;
                             }
 
                             // Don't add this character to the buffer
@@ -401,7 +434,7 @@ namespace CppXmlComments
                         lineBreak = lineBreak == "" || lineBreak == null ? "\n" : lineBreak;
                         
                         // If inside the XML block, add  the leading ///
-                        if (currentLine != null && currentLine.TrimStart().StartsWith("///") && this.dte != null)
+                        if (!String.IsNullOrEmpty(currentLine) && currentLine.TrimStart().StartsWith("///") && this.dte != null)
                         {
                             string text = String.Format("{0}{1} ", lineBreak, currentLine.Substring(0, currentLine.IndexOf("///") + 3));
                             var textSelection = this.dte.ActiveDocument.Selection as TextSelection;
@@ -425,24 +458,27 @@ namespace CppXmlComments
                 // Trigger the completion list
                 if (!key.Equals(char.MinValue) && key == '<')
                 {
-                    // If there is no active session, create one
-                    if (this.session == null || this.session.IsDismissed)
-                        this.TriggerCompletion();
-
-                    // Check if the session was created
-                    if (this.session == null)
+                    // Check if it is inside a comment block
+                    string currentLine = this.textView.TextSnapshot.GetLineFromPosition(this.textView.Caret.Position.BufferPosition.Position).GetText();
+                    if (!currentLine.TrimStart().StartsWith("///"))
                         return result;
-
-                    // Filter the session based on current input
-                    this.session.Filter();
-                    return VSConstants.S_OK;
+                    
+                    // If the session does not exist, try to create one
+                    if ((this.session == null || this.session.IsDismissed) && this.TriggerCompletion())
+                    {
+                        // Filter the session based on current input
+                        this.session.Filter();
+                        return VSConstants.S_OK;
+                    }
                 }
                 else if (commandId == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandId == (uint)VSConstants.VSStd2KCmdID.DELETE || char.IsLetterOrDigit(key))
                 {
                     // Filter if the session is active
                     if (this.session != null && !this.session.IsDismissed)
+                    {
                         this.session.Filter();
-                    return VSConstants.S_OK;
+                        return VSConstants.S_OK;
+                    }
                 }
                 return result;
             }
