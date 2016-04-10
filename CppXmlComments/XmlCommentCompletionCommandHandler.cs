@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -150,6 +151,98 @@ namespace CppXmlComments
             this.session = null;
         }
 
+        private EditPoint FindFirstMatch(EditPoint startPoint, string pattern)
+        {
+            EditPoint endPoint = null;
+            TextRanges tags = null;
+
+            if (startPoint != null && startPoint.FindPattern(pattern, (int)(vsFindOptions.vsFindOptionsRegularExpression | vsFindOptions.vsFindOptionsMatchInHiddenText), ref endPoint, ref tags))
+                return startPoint.CreateEditPoint();
+            return null;
+        }
+
+        /// <summary>
+        /// Tries to detect the top level function declaration and adds comment if it was a function.
+        /// </summary>
+        /// <param name="textSelection">The <see cref="TextSelection"/>.</param>
+        /// <returns>True if successful; otherwise false.</returns>
+        private bool TryAddCommentForTopLevelFunctionDeclaration(TextSelection textSelection, string lineBreak, string indent, int lineNum, int offset)
+        {
+            // Create an edit point
+            var editPoint = textSelection.ActivePoint.CreateEditPoint();
+
+            // Get the function declaration
+            string functionLine = editPoint.GetLines(editPoint.Line, editPoint.Line + 1);
+
+            // Check if it's empty or there is no left parentheses
+            if (String.IsNullOrEmpty(functionLine) || functionLine.IndexOf('(') < 0)
+                return false;
+
+            // If there is no semi-colon, then find the semi-colon
+            if (functionLine.TrimEnd().EndsWith(";"))
+            {
+                editPoint.EndOfLine();
+                editPoint.CharLeft();
+            }
+            else
+            {
+                editPoint.EndOfLine();
+                editPoint = this.FindFirstMatch(editPoint, ";");
+            }
+            if (editPoint == null)
+                return false;
+
+            // Get the end of the text
+            var endPoint = editPoint.CreateEditPoint();
+            endPoint.EndOfLine();
+            string text = editPoint.GetText(endPoint);
+
+            // Remove the text and append {}
+            editPoint.Delete(endPoint);
+            editPoint.Insert("{}");
+
+            var codeElement = editPoint.CodeElement[vsCMElement.vsCMElementFunction];
+            if (codeElement == null || !(codeElement is CodeFunction))
+            {
+                // Remove the text and append original text
+                editPoint.CharLeft(2);
+                editPoint.Delete(2);
+                editPoint.Insert(text);
+                textSelection.MoveToLineAndOffset(lineNum, offset);
+                return false;
+            }
+
+            // Generate comment for function
+            StringBuilder sb = new StringBuilder("/ <summary>" + lineBreak + indent + "/// " + lineBreak + indent + "/// </summary>");
+            foreach (CodeElement child in codeElement.Children)
+            {
+                CodeParameter parameter = child as CodeParameter;
+                if (parameter != null)
+                    sb.AppendFormat("{0}{1}/// <param name=\"{2}\"></param>", lineBreak, indent, parameter.Name);
+            }
+
+            // If there is the return type is not void, generate a returns element
+            var function = codeElement as CodeFunction;
+            if (function.Type.AsString != "void")
+                sb.AppendFormat("{0}{1}/// <returns></returns>", lineBreak, indent);
+
+            // Insert comment
+            textSelection.MoveToLineAndOffset(lineNum, offset);
+            textSelection.Insert(sb.ToString());
+
+            // Remove the text and append original text
+            editPoint.CharLeft(2);
+            editPoint.Delete(2);
+            editPoint.Insert(text);
+
+            // Move the caret to the summary section
+            textSelection.MoveToLineAndOffset(lineNum + 1, offset);
+            textSelection.EndOfLine();
+
+            // Return success
+            return true;
+        }
+
         /// <summary>
         /// Inserts comment at the given point.
         /// </summary>
@@ -213,6 +306,9 @@ namespace CppXmlComments
                 textSelection.EndOfLine();
                 return true;
             }
+            // Add comment for tshe top level function declaration
+            else if (codeElement == null && this.TryAddCommentForTopLevelFunctionDeclaration(textSelection, lineBreak, indent, lineNum, offset))
+                return true;
             // TODO(acmore): Check if it's inside a function
             // Add summary comment
             else
