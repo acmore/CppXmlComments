@@ -8,4 +8,4 @@ Downloads [CppXmlComments](https://visualstudiogallery.msdn.microsoft.com/80544e
 Similar to add comment for C# in visual studio 2015.
 
 # Contribute
-File an issue for any new feature request. Pulls request to add new features or bug fixes are welcomed.
+File an issue for any new feature request. Pull requests to add new features or fix bugs are welcomed.
