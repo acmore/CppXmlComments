@@ -471,7 +471,7 @@ namespace CppXmlComments
                         return VSConstants.S_OK;
                     }
                 }
-                else if (commandId == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandId == (uint)VSConstants.VSStd2KCmdID.DELETE || char.IsLetterOrDigit(key))
+                else if (commandId == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandId == (uint)VSConstants.VSStd2KCmdID.DELETE || char.IsLetter(key))
                 {
                     // Filter if the session is active
                     if (this.session != null && !this.session.IsDismissed)
