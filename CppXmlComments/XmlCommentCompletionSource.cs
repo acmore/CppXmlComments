@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Media;
 
 namespace CppXmlComments
@@ -110,7 +111,7 @@ namespace CppXmlComments
                     "XmlComment",
                     trackingSpan,
                     this.completionList,
-                    null));
+                    Enumerable.Empty<Completion>()));
             }
             catch (Exception)
             {
@@ -132,10 +133,8 @@ namespace CppXmlComments
                     return null;
 
                 // Find the token span at current position
-                SnapshotPoint currentPoint = (session.TextView.Caret.Position.BufferPosition) - 1;
-                ITextStructureNavigator navigator = this.sourceProvider.NavigatorService.GetTextStructureNavigator(this.textBuffer);
-                TextExtent extent = navigator.GetExtentOfWord(currentPoint);
-                return currentPoint.Snapshot.CreateTrackingSpan(extent.Span, SpanTrackingMode.EdgeInclusive);
+                SnapshotPoint currentPoint = session.TextView.Caret.Position.BufferPosition - 1;
+                return currentPoint.Snapshot.CreateTrackingSpan(currentPoint.Position, 1, SpanTrackingMode.EdgeInclusive);
             }
             catch(Exception)
             {
