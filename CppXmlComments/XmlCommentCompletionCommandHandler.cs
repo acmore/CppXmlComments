@@ -244,22 +244,60 @@ namespace CppXmlComments
         }
 
         /// <summary>
+        /// Gets the leading spaces.
+        /// </summary>
+        /// <param name="text">The text.</param>
+        /// <returns>The leading spaces.</returns>
+        private string LeadingSpaces(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (!char.IsWhiteSpace(text[i]))
+                return text.Substring(0, i);
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the indention.
+        /// </summary>
+        /// <param name="lineNumber">The line number.</param>
+        /// <returns>The indention.</returns>
+        /// <remarks>The line number starts from 1.</remarks>
+        private string GetIndention(int lineNumber)
+        {
+            try
+            {
+                var decoratedLine = this.textView.TextSnapshot.GetLineFromLineNumber(lineNumber - 1);
+                return LeadingSpaces(decoratedLine.GetText());
+            }
+            catch(Exception)
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Inserts comment at the given point.
         /// </summary>
         /// <param name="currentSnapshotLine">The <see cref="ITextSnapshotLine"/>.</param>
         /// <returns>True if successful; otherwise false.</returns>
+        /// <remarks>The <see cref="ITextSnapshotLine"/>'s LineNumber is starting from 0.</remarks>
         private bool InsertCommentAtPoint(ITextSnapshotLine currentSnapshotLine)
         {
             // Data validation
             if (currentSnapshotLine == null || this.dte == null)
                 return false;
 
+            // Get text selection to insert the comment
+            var textSelection = this.dte.ActiveDocument.Selection as TextSelection;
+            if (textSelection == null)
+                return false;
+
             // Initialize
             var currentLine = currentSnapshotLine.GetText();
-            var indent = currentLine.Substring(0, currentLine.IndexOf("//"));
             var lineBreak = currentSnapshotLine.GetLineBreakText();
             lineBreak = String.IsNullOrEmpty(lineBreak) ? "\r\n" : lineBreak;
-            var textSelection = this.dte.ActiveDocument.Selection as TextSelection;
             var lineNum = textSelection.ActivePoint.Line;
             var offset = textSelection.ActivePoint.LineCharOffset;
 
@@ -267,6 +305,9 @@ namespace CppXmlComments
             textSelection.LineDown();
             textSelection.EndOfLine();
 
+            // Update the indent
+            var indent = this.GetIndention(textSelection.CurrentLine);
+            
             // Get code element
             var fileCodeModel = this.dte.ActiveDocument.ProjectItem.FileCodeModel;
             CodeElement codeElement = fileCodeModel == null ? null : fileCodeModel.CodeElementFromPoint(textSelection.ActivePoint, vsCMElement.vsCMElementFunction);
@@ -286,7 +327,7 @@ namespace CppXmlComments
                 }
 
                 // Generate comment for function
-                StringBuilder sb = new StringBuilder("/ <summary>" + lineBreak + indent + "/// " + lineBreak + indent + "/// </summary>");
+                StringBuilder sb = new StringBuilder(indent + "/// <summary>" + lineBreak + indent + "/// " + lineBreak + indent + "/// </summary>");
                 foreach (CodeElement child in codeElement.Children)
                 {
                     CodeParameter parameter = child as CodeParameter;
@@ -300,9 +341,10 @@ namespace CppXmlComments
 
                 // Move to summary element
                 textSelection.MoveToLineAndOffset(lineNum, offset);
+                if (offset > 1)
+                    textSelection.DeleteLeft(offset - 1);
                 textSelection.Insert(sb.ToString());
-                textSelection.MoveToLineAndOffset(lineNum, offset);
-                textSelection.LineDown();
+                textSelection.MoveToLineAndOffset(lineNum + 1, offset);
                 textSelection.EndOfLine();
                 return true;
             }
@@ -315,11 +357,12 @@ namespace CppXmlComments
             {
                 // Generate a summary element
                 textSelection.MoveToLineAndOffset(lineNum, offset);
-                textSelection.Insert(String.Format("/ <summary>{0}{1}/// {0}{1}/// </summary>", lineBreak, indent));
+                if (offset > 1)
+                    textSelection.DeleteLeft(offset - 1);
+                textSelection.Insert(String.Format("{0}/// <summary>{0}{1}/// {0}{1}/// </summary>", indent, lineBreak, indent));
 
                 // Move to summary element
-                textSelection.MoveToLineAndOffset(lineNum, offset);
-                textSelection.LineDown();
+                textSelection.MoveToLineAndOffset(lineNum + 1, offset);
                 textSelection.EndOfLine();
                 return true;
             }
@@ -431,15 +474,18 @@ namespace CppXmlComments
                         var textSnapshotLine = this.textView.TextSnapshot.GetLineFromPosition(this.textView.Caret.Position.BufferPosition.Position);
                         var currentLine = textSnapshotLine.GetText();
                         var lineBreak = textSnapshotLine.GetLineBreakText();
-                        lineBreak = lineBreak == "" || lineBreak == null ? "\n" : lineBreak;
+                        lineBreak = string.IsNullOrEmpty(lineBreak) ? "\n" : lineBreak;
                         
                         // If inside the XML block, add  the leading ///
                         if (!String.IsNullOrEmpty(currentLine) && currentLine.TrimStart().StartsWith("///") && this.dte != null)
                         {
                             string text = String.Format("{0}{1} ", lineBreak, currentLine.Substring(0, currentLine.IndexOf("///") + 3));
                             var textSelection = this.dte.ActiveDocument.Selection as TextSelection;
-                            textSelection.Insert(text);
-                            return VSConstants.S_OK;
+                            if (textSelection != null)
+                            {
+                                textSelection.Insert(text);
+                                return VSConstants.S_OK;
+                            }
                         }
                     }
                 }
