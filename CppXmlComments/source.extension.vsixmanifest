@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CppXmlComments.acmore.30c260b1-b173-4d74-af8b-a3d20291465a" Version="1.0.4" Language="en-US" Publisher="acmore" />
+        <Identity Id="CppXmlComments.acmore.30c260b1-b173-4d74-af8b-a3d20291465a" Version="1.0.5" Language="en-US" Publisher="acmore" />
         <DisplayName>Xml Comments for C++</DisplayName>
         <Description xml:space="preserve">An xml comment generator for c/c++ projects.</Description>
         <MoreInfo>https://github.com/acmore/CppXmlComments</MoreInfo>

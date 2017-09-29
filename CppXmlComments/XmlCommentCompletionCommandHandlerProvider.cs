@@ -50,6 +50,11 @@ namespace CppXmlComments
                 if (textView == null)
                     return;
 
+                // Check content type
+                var contentType = textView.TextBuffer?.ContentType?.TypeName;
+                if (string.IsNullOrEmpty(contentType) || !contentType.Equals("C/C++", StringComparison.InvariantCultureIgnoreCase))
+                    return;
+
                 // Create a callback to create the command handler
                 Func<XmlCommentCompletionCommandHandler> createCommandHandler = delegate ()
                 {

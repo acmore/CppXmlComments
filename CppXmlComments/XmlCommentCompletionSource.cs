@@ -87,7 +87,8 @@ namespace CppXmlComments
                 return;
 
             // Check content type
-            if (this.textBuffer.ContentType.TypeName != "C/C++")
+            var contentType = this.textBuffer.ContentType?.TypeName;
+            if (string.IsNullOrEmpty(contentType) || !contentType.Equals("C/C++", StringComparison.InvariantCultureIgnoreCase))
                 return;
 
             // Get current point
